@@ -1,4 +1,5 @@
 #pragma warning disable CA1822
+using System.Runtime.CompilerServices;
 using HungerGames.Helpers;
 using HungerGames.Player;
 
@@ -10,6 +11,12 @@ class SlashCommands : ApplicationCommandModule
     [SlashCommand("create", "Create a new game")]
     public async Task CreateGame(InteractionContext ctx)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
         if (GlobalGames.IsRunning(ctx.Guild.Id))
         {
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -26,6 +33,12 @@ class SlashCommands : ApplicationCommandModule
     public async Task Tribute(InteractionContext ctx,
     [Option("district", "District number")] long district)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
         var game = GlobalGames.GetGame(ctx.Guild.Id);
         try { GameStatusCheck(game, ctx.Guild.Id); }
         catch (ArgumentException e)
@@ -52,6 +65,12 @@ class SlashCommands : ApplicationCommandModule
     [SlashCommand("start", "Start the game")]
     public async Task StartGame(InteractionContext ctx)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
         var game = GlobalGames.GetGame(ctx.Guild.Id);
         try { GameStatusCheck(game, ctx.Guild.Id); }
         catch (ArgumentException e) 
@@ -69,6 +88,12 @@ class SlashCommands : ApplicationCommandModule
     [SlashCommand("lottery", "Assign a member to a random district")]
     public async Task Lottery(InteractionContext ctx, [Option("user", "User to enter the lottery")] DiscordUser member = null!)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
         if (member is not null && !ctx.Member.Permissions.HasPermission(Permissions.ManageGuild))
         {
             await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
@@ -101,6 +126,12 @@ class SlashCommands : ApplicationCommandModule
     [SlashCommand("list", "Lists all members in the game")]
     public async static Task ListMems(InteractionContext ctx)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
         Game.Game? game = GlobalGames.GetGame(ctx.Guild.Id);
         if (game is null)
         {
@@ -139,6 +170,18 @@ class SlashCommands : ApplicationCommandModule
     [SlashCommand("reset", "Resets the game")]
     public async Task StopGame(InteractionContext ctx)
     {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
+        if (ctx.Member.Permissions.HasPermission(Permissions.ManageGuild))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You do not have permission to reset the game!" });
+            return;
+        }
         var game = GlobalGames.GetGame(ctx.Guild.Id);
         if (game is null)
         {
@@ -161,6 +204,47 @@ class SlashCommands : ApplicationCommandModule
 
     }
 
+    [SlashCommand("changedistrict", "Change your district")]
+    public async Task ChangeDistrict(InteractionContext ctx, 
+        [Option("district", "District you would like to be reassinged to")] long dist)
+    {
+        if (IsBlocked(ctx.Member.Id))
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not allowed to use this bot :)!" });
+            return;
+        }
+        var game = GlobalGames.GetGame(ctx.Guild.Id);
+        if (game is null)
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "No game is running! Please have a moderator create a game." });
+            return;
+        }
+        var player = (from p in game?.Players
+                     where p.User.Id == ctx.Member.Id
+                     select p).FirstOrDefault();
+        if (player is null)
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "You are not in the game!" });
+            return;
+        }
+        try
+        {
+            player.District = (int)dist;
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = $"Changed district to {dist}" });
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "District must be between 1 and 12!" });
+            return;
+        }
+    }
+
+
     private static void GameStatusCheck(Game.Game? game, ulong guildId)
     {
         if (game is null)
@@ -172,4 +256,7 @@ class SlashCommands : ApplicationCommandModule
             throw new ArgumentException("Game is already running!");
         }
     }
+
+    private static readonly ulong[] BlockedIds = {  };
+    private static bool IsBlocked(ulong id) => BlockedIds.Contains(id);
 }
