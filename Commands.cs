@@ -136,6 +136,31 @@ class SlashCommands : ApplicationCommandModule
             new DiscordInteractionResponseBuilder().AddEmbed(eb.Build()));
     }
 
+    [SlashCommand("reset", "Resets the game")]
+    public async Task StopGame(InteractionContext ctx)
+    {
+        var game = GlobalGames.GetGame(ctx.Guild.Id);
+        if (game is null)
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "No game is running!" });
+            return;
+        }
+        try
+        {
+            game?.Reset(ctx.Guild.Id);
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "Game reset!" });
+        }
+        catch
+        {
+            await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
+                new() { Content = "Game reset failed!" });
+            GlobalLogger.Log(LogLevel.Error, "Game reset failed at {Time}", DateTime.Now.ToString());
+        }
+
+    }
+
     private static void GameStatusCheck(Game.Game? game, ulong guildId)
     {
         if (game is null)
