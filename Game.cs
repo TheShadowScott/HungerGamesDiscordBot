@@ -72,7 +72,9 @@ public class Game
     public void Reset(ulong guildId)
     {
         GlobalGames.UpdateGame(guildId, false);
-        Players.Clear();
+        foreach (var player in Players)
+            player.Reset();
+        // Players.Clear();
     }
     public async void ProgressDay(DiscordGuild guild, ulong channelId, DiscordClient client)
     {

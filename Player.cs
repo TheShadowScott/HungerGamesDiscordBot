@@ -25,6 +25,7 @@ public sealed class PlayerObject
         District = district;
     }
     private void Kill() => Alive = false;
+    public void Reset() => Alive = true;
     public string TriggerRandomEvent(Game.Game game)
     {
         (string eventStr, bool death) = Random.Shared.Choice(Game.Game.Events);

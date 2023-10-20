@@ -1,5 +1,4 @@
 #pragma warning disable CA1822
-using System.Runtime.CompilerServices;
 using HungerGames.Helpers;
 using HungerGames.Player;
 
